@@ -1,0 +1,9 @@
+[package]
+name = "treno"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+amtrak-api = { git = "https://github.com/StefanBossbaly/amtrak-api.git", branch = "master" }
+chrono = "0.4.41"
+tokio = { version = "1.45.1", features = ["full"] }

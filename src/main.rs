@@ -1,0 +1,95 @@
+use amtrak_api::Client;
+use chrono::TimeDelta;
+
+// const STATION_CODE: &str = "SEA";
+
+fn arrival_delta_to_human_string(mut delta: TimeDelta) -> String {
+    let mut time = String::new();
+
+    let early_or_late = if delta.num_seconds() < 0 {
+        delta = -delta;
+        "early"
+    } else {
+        "late"
+    };
+
+    time.push_str(&format!("{} hours ", delta.num_hours()));
+    delta = delta - chrono::Duration::hours(delta.num_hours());
+
+    time.push_str(&format!("{} minutes ", delta.num_minutes()));
+    delta = delta - chrono::Duration::minutes(delta.num_minutes());
+
+    time.push_str(&format!("{} seconds", delta.num_seconds()));
+    return format!("{} {}", time, early_or_late);
+    // println!("Train is {} {}", time, early_or_late);
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Client::new()
+    //     .station(STATION_CODE)
+    //     .await?
+    //     .values()
+    //     .for_each(|station| {
+    //         println!(
+    //             "Current train scheduled for station \"{}\": {}",
+    //             station.name,
+    //             station.trains.join(", ")
+    //         );
+    //     });
+
+    let client = Client::new();
+
+    // client.trains()
+    //     .await?
+    //     .into_iter()
+    //     .flat_map(|(_, trains)| { trains })
+    //     .for_each(|train| {
+    //         println!("Train ID {} from {} to {}", train.train_id, train.origin_code, train.destination_code);
+    //         println!("\tTimely: {:?}", train.train_state);
+    //         println!("\tCurrently at coords: {},{}", train.lat, train.lon);
+    //         println!("");
+    //         train.stations
+    //             .iter()
+    //             .for_each(|station| {
+    //                 println!("\tStation: {} ({})", station.name, station.code);
+    //                 println!("\t\tScheduled: {}", station.schedule_arrival);
+    //                 println!("\t\tActual: {:?}", station.arrival);
+    //                 // println!("\t\tStatus: {}", station.status);
+    //             });
+    //     });
+
+    let result = client.train("7-27").await?;
+    let trains = result.get("7").unwrap();
+    let train = trains.first().unwrap();
+    let next_station = &train.event_code;
+
+    println!(
+        "Train ID {} from {} to {}",
+        train.train_id, train.origin_code, train.destination_code
+    );
+    let next_station = train
+        .stations
+        .iter()
+        .find(|s| s.code == *next_station)
+        .unwrap();
+
+    println!("\tNext Station: {} ({})", next_station.name, next_station.code);
+
+    {
+        println!("\t\tScheduled: {}", next_station.schedule_arrival);
+        println!("\t\tActual: {:?}", next_station.arrival.unwrap());
+        let arrival_delta = next_station.arrival.unwrap() - next_station.schedule_arrival;
+        println!("\t\t{}", arrival_delta_to_human_string(arrival_delta));
+    }
+
+    // println!("{:?}", train);
+    // train.stations.iter().for_each(|station| {
+    //     println!("\tStation: {} ({})", station.name, station.code);
+    //     println!("\t\tScheduled: {}", station.schedule_arrival);
+    //     println!("\t\tActual: {:?}", station.arrival);
+    //     // println!("\t\tStatus: {}", station.status);
+    // });
+
+    Ok(())
+}
