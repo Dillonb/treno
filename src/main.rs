@@ -26,41 +26,30 @@ fn arrival_delta_to_human_string(mut delta: TimeDelta) -> String {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Client::new()
-    //     .station(STATION_CODE)
-    //     .await?
-    //     .values()
-    //     .for_each(|station| {
-    //         println!(
-    //             "Current train scheduled for station \"{}\": {}",
-    //             station.name,
-    //             station.trains.join(", ")
-    //         );
-    //     });
+    let args = std::env::args().collect::<Vec<String>>();
+    if args.len() != 2 {
+        eprintln!("Usage: {} <train_id>", args[0]);
+        eprintln!("Example: '7-27' for the train 7 that left the station on the 27th, or 7-4 for train 7 that left the station on the 4th of the month.");
+        return Ok(());
+    }
+
+    let train_id = &args[1];
+    let train_id_parts: Vec<&str> = train_id.split('-').collect();
+    if train_id_parts.len() != 2 {
+        eprintln!("Invalid train ID format. Expected format: <train_number>-<date>");
+        return Ok(());
+    }
+    let train_number = train_id_parts[0];
 
     let client = Client::new();
 
-    // client.trains()
-    //     .await?
-    //     .into_iter()
-    //     .flat_map(|(_, trains)| { trains })
-    //     .for_each(|train| {
-    //         println!("Train ID {} from {} to {}", train.train_id, train.origin_code, train.destination_code);
-    //         println!("\tTimely: {:?}", train.train_state);
-    //         println!("\tCurrently at coords: {},{}", train.lat, train.lon);
-    //         println!("");
-    //         train.stations
-    //             .iter()
-    //             .for_each(|station| {
-    //                 println!("\tStation: {} ({})", station.name, station.code);
-    //                 println!("\t\tScheduled: {}", station.schedule_arrival);
-    //                 println!("\t\tActual: {:?}", station.arrival);
-    //                 // println!("\t\tStatus: {}", station.status);
-    //             });
-    //     });
-
-    let result = client.train("7-27").await?;
-    let trains = result.get("7").unwrap();
+    let result = client.train(&train_id).await?;
+    let maybe_trains = result.get(train_number);
+    if maybe_trains.is_none() {
+        eprintln!("No train found with ID: {}. Check the date and timetables, has the train left the origin station yet?", train_id);
+        return Ok(());
+    }
+    let trains = maybe_trains.unwrap();
     let train = trains.first().unwrap();
     let next_station = &train.event_code;
 
@@ -82,14 +71,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let arrival_delta = next_station.arrival.unwrap() - next_station.schedule_arrival;
         println!("\t\t{}", arrival_delta_to_human_string(arrival_delta));
     }
-
-    // println!("{:?}", train);
-    // train.stations.iter().for_each(|station| {
-    //     println!("\tStation: {} ({})", station.name, station.code);
-    //     println!("\t\tScheduled: {}", station.schedule_arrival);
-    //     println!("\t\tActual: {:?}", station.arrival);
-    //     // println!("\t\tStatus: {}", station.status);
-    // });
 
     Ok(())
 }
