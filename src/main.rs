@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use amtrak_api::{Client, Train};
 use chrono::TimeDelta;
 
@@ -147,6 +149,11 @@ async fn display_train_id(train_id: &str) -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
+async fn get_all_trains() -> Result<HashMap<String, Vec<Train>>, Box<dyn std::error::Error>> {
+    let client = Client::new();
+    Ok(client.trains().await?)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().collect::<Vec<String>>();
@@ -162,8 +169,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if train_id.contains("-") {
         display_train_id(train_id).await
     } else if train_id == "all" {
-        let client = Client::new();
-        let trains = client.trains().await?;
+        let trains = get_all_trains().await?;
         trains
             .values()
             .flat_map(|trains| trains)
@@ -173,8 +179,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!();
             });
         Ok(())
+    } else if let Ok(train_number) = train_id.parse::<u32>() {
+        let trains = get_all_trains().await?;
+        let trains = trains.get(&train_number.to_string());
+        if trains.is_none() {
+            eprintln!("No train found with number: {}", train_number);
+            return Ok(());
+        }
+        let trains = trains.unwrap();
+        trains.into_iter().for_each(|train| {
+                display_train(train);
+                println!();
+            });
+        Ok(())
     } else {
-        eprintln!("Invalid train ID format. Expected format: <train_number>-<date> or 'all'");
+        eprintln!("Invalid train ID format. Expected format: <train_number>-<date>, <train_number>, or 'all'");
         Ok(())
     }
 }
