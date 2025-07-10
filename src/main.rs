@@ -94,7 +94,7 @@ fn display_train(train: &Train) {
     let spaces = " ".repeat(longest_station_code_len + 1);
 
     let train_icon = "󰣄";
-    let lines = train
+    let columns = train
         .stations
         .iter()
         .flat_map(|station| {
@@ -116,10 +116,10 @@ fn display_train(train: &Train) {
         })
         .collect::<Vec<String>>();
 
-    let line_len = lines.first().unwrap().len();
-    for i in 0..line_len {
-        for line in &lines {
-            print!("{}", line.chars().nth(i).unwrap());
+    let column_len = columns.first().unwrap().len();
+    for i in 0..column_len {
+        for columns in &columns {
+            print!("{}", columns.chars().nth(i).unwrap());
         }
         println!("");
     }
