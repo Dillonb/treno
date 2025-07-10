@@ -158,42 +158,44 @@ async fn get_all_trains() -> Result<HashMap<String, Vec<Train>>, Box<dyn std::er
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() != 2 {
-        eprintln!("Usage: {} [<train_id>|<train_number>|all]", args[0]);
+        eprintln!("Usage: {} [<train_id>|<train_number>|all],...", args[0]);
         eprintln!(
             "Train ID format: '7-27' for the train 7 that left the station on the 27th, or 7-4 for train 7 that left the station on the 4th of the month."
         );
         return Ok(());
     }
 
-    let train_id = &args[1];
-    if train_id.contains("-") {
-        display_train_id(train_id).await
-    } else if train_id == "all" {
-        let trains = get_all_trains().await?;
-        trains
-            .values()
-            .flat_map(|trains| trains)
-            .filter(|train| train.provider == "Amtrak")
-            .for_each(|train| {
-                display_train(&train);
-                println!();
-            });
-        Ok(())
-    } else if let Ok(train_number) = train_id.parse::<u32>() {
-        let trains = get_all_trains().await?;
-        let trains = trains.get(&train_number.to_string());
-        if trains.is_none() {
-            eprintln!("No train found with number: {}", train_number);
-            return Ok(());
+    for train_id in args[1].split(',') {
+        // let train_id = &args[1];
+        if train_id.contains("-") {
+            let _ = display_train_id(train_id).await;
+        } else if train_id == "all" {
+            let trains = get_all_trains().await?;
+            trains
+                .values()
+                .flat_map(|trains| trains)
+                .filter(|train| train.provider == "Amtrak")
+                .for_each(|train| {
+                    display_train(&train);
+                    println!();
+                });
+        } else if let Ok(train_number) = train_id.parse::<u32>() {
+            let trains = get_all_trains().await?;
+            let trains = trains.get(&train_number.to_string());
+            if trains.is_none() {
+                eprintln!("No train found with number: {}", train_number);
+            } else {
+                let trains = trains.unwrap();
+                trains.into_iter().for_each(|train| {
+                    display_train(train);
+                    println!();
+                });
+            }
+        } else {
+            eprintln!(
+                "Invalid train ID format. Expected format: <train_number>-<date>, <train_number>, or 'all'"
+            );
         }
-        let trains = trains.unwrap();
-        trains.into_iter().for_each(|train| {
-                display_train(train);
-                println!();
-            });
-        Ok(())
-    } else {
-        eprintln!("Invalid train ID format. Expected format: <train_number>-<date>, <train_number>, or 'all'");
-        Ok(())
     }
+    Ok(())
 }
